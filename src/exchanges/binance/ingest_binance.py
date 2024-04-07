@@ -2,13 +2,12 @@ import os
 import zipfile
 
 from pyspark.sql import Window
-from pyspark.sql.functions import row_number, col, lit, date_format
+from pyspark.sql.functions import row_number, col, date_format
 
-from config import ROOT_DIR, BINANCE_CSV_PATH, RAW_DB, BINANCE_RAW_TABLE
+from config import BINANCE_CSV_PATH, RAW_DB, BINANCE_RAW_TABLE, EXCHANGES_RAW_FILES
 from utils.spark_utils import read_csv_to_df, get_spark, write_table
 
-RAW_DATA_PATH = f"{ROOT_DIR}/data/raw"
-EXCHANGES_RAW_FILES = f"{RAW_DATA_PATH}/exchanges"
+
 def extract_files(path, exchange):
     for file in os.listdir(path):
         if file.__contains__(".zip"):
@@ -38,18 +37,16 @@ if __name__ == "__main__":
     df = read_csv_to_df(BINANCE_CSV_PATH).distinct()
 
     # non contextual transformations before writing into db or parquet
-    df_trans = (df
+    df_transactions = (df
                 .withColumn("year_month", date_format(col("UTC_Time"), "yyyyMM"))
                 .withColumn("date_key", date_format(col("UTC_Time"), "yyyyMMdd")))
 
     w = Window().orderBy("UTC_Time").partitionBy("year_month")
 
-    df_trans = df_trans.withColumn("row_number", row_number().over(w))
+    df_trans = df_transactions.withColumn("row_number", row_number().over(w))
 
     df_trans.show()
     print(f"table has {df_trans.count()} records.")
 
     write_table(df_trans, RAW_DB, BINANCE_RAW_TABLE)
-
-
 
