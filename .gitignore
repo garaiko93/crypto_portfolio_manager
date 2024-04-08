@@ -3,3 +3,4 @@ data/
 venv/
 resources/my_access.py
 src/commands.txt
+src/exchanges/binance/develop.py
