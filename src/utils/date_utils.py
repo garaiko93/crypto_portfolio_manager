@@ -1,3 +1,5 @@
+from datetime import datetime
 
 
-def get_
+def get_load_date_today():
+    return datetime.datetime.now().strftime("%Y%M%d")

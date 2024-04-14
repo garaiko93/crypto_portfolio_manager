@@ -3,7 +3,7 @@ import argparse
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import col, to_date, lit, collect_list, to_json, create_map, sum
 
-from config import REFINED_DB, REFINED_TRADES, REFINED_STAKING_REWARDS, STABLE_COINS
+from config import config
 from utils.date_utils import get_load_date_today
 from utils.spark_utils import get_spark, read_table
 
@@ -66,8 +66,8 @@ if __name__ == "__main__":
     # args = get_parameteres()
 
     # read refined trades table from postgresql
-    df_trades = read_table(REFINED_DB, REFINED_TRADES)
-    df_staking_rewards = read_table(REFINED_DB, REFINED_STAKING_REWARDS)
+    df_trades = read_table(config.REFINED_DB, config.REFINED_TRADES)
+    df_staking_rewards = read_table(config.REFINED_DB, config.REFINED_STAKING_REWARDS)
 
     # filter by given date or take whole table
     df_trades_filtered = df_trades.filter(col("timestamp") < to_date(lit("20240406"), "yyyyMMdd"))
@@ -112,11 +112,22 @@ if __name__ == "__main__":
     #####################################################
     # BUILD FINAL PORTFOLIO
     #####################################################
-    df_portfolio = (df_sells.drop("sell_fee_amount", "sell_fee_coin")
+    df_portfolio = ((df_sells.drop("sell_fee_amount", "sell_fee_coin")
                     .join(df_buys.drop("buy_fee_amount", "buy_fee_coin"), ["coin", "exchange"], "outer")
                     .join(df_rewards, ["coin", "exchange"], "outer")
                     .join(df_fees, ["coin", "exchange"], "outer")
                     ).sort("coin", "exchange")
+    .select(
+        "coin",
+        "exchange",
+        "buy_sent_json",
+        "buy_received_amount",
+        "buy_fee_json",
+        "sell_received_json",
+        "sell_sent_amount",
+        "sell_fee_json",
+        "reward_amount"
+    ))
     df_portfolio.show(1000)
 
     # todo: review busd and usdt values, why?
